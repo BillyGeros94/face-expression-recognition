@@ -170,6 +170,9 @@ nb_before_results <- evaluate_model(models_raw$nb, test_data)
 dt_before_results <- evaluate_model(models_raw$dt, test_data)
 knn_before_results <- evaluate_model(models_raw$knn, test_data)
 
+# Save the model to disk
+saveRDS(models_raw$knn, "./PrePCA_KNN.rds")
+
 # Combine all metrics into a data frame for comparison
 metrics_before <- data.frame(
   Model = c("Naive Bayes", "Decision Tree", "KNN"),
@@ -250,3 +253,4 @@ cluster(pca_data, method = "gmm")
 
 # Apply DBSCAN
 cluster(pca_data, method = "dbscan")
+
