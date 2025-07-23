@@ -21,6 +21,7 @@ in the MSc program **Data Science and Machine Learning** at the **Hellenic Open 
 - `src/` – Modular R scripts: preprocessing, modeling, evaluation  
 - `report/` – Full analytical report (PDF)  
 - `presentation/` – Slide deck summarizing methods and results (PowerPoint)
+- `api/` – API folder containing the serialized model and Plumber API script
 
 ---
 
@@ -51,6 +52,28 @@ in the MSc program **Data Science and Machine Learning** at the **Hellenic Open 
    - `readxl`, `caret`, `rpart`, `rpart.plot`, `dbscan`, `mclust`, `cluster`, `factoextra`  
 4. See `src/setup.R` for package installation helper function  
 
+---
+
+## ⚙️ API Usage
+
+This project includes a **Plumber-based API** for real-time facial expression prediction using the trained KNN model.
+
+### How to Run the API Locally
+
+1. Ensure you have the **R package `plumber`** installed.
+
+2. Run the API script located in the api/ folder inside an interactive R session (R console or RStudio):
+   
+   ```r
+   library(plumber)
+   pr <- plumb('path/to/api/api.R')
+   pr$run(host='0.0.0.0', port=8000)
+   ```
+
+3. The API will start listening on all network interfaces (0.0.0.0) at port 8000.
+
+4. Access the Swagger UI at: http://localhost:8000/__swagger__/
+  
 ---
 
 ## 📄 License and Dataset
