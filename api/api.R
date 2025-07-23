@@ -7,6 +7,17 @@ library(plumber)
 
 model <- readRDS("./PrePCA_KNN.rds")
 
+#* @get /health
+function(){
+  
+  res <- list(
+    status_code = 200,
+    status = "success",
+    message = "The API is up and running."
+  )
+  
+  return(res)
+}
 
 #* @param H1 Height of the inner left eyebrow
 #* @param H2 Height of the middle left eyebrow
@@ -25,17 +36,7 @@ model <- readRDS("./PrePCA_KNN.rds")
 #* @param R2 Distance between eyes and mouth
 #* @param R4 Distance between eye centers
 
-#* @get /health
-function(){
-  
-  res <- list(
-    status_code = 200,
-    status = "success",
-    message = "The API is up and running."
-  )
-  
-  return(res)
-}
+
 
 #* @post /predict
 function (H1, H2, H3, L1, H5, H6, H7, H8, L2, H10, W2, H15, W3, R1, R2, R4){
