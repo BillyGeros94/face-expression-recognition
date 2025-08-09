@@ -58,9 +58,9 @@ in the MSc program **Data Science and Machine Learning** at the **Hellenic Open 
 
 This project includes a **Plumber-based API** for real-time facial expression prediction using the trained KNN model.
 
-### How to Run the API Locally
+### Locally (R Session)
 
-1. Ensure you have the **R package `plumber`** installed.
+1. Make sure the **R package `plumber`** is installed.
 
 2. Run the API script located in the api/ folder inside an interactive R session (R console or RStudio):
    
@@ -70,10 +70,35 @@ This project includes a **Plumber-based API** for real-time facial expression pr
    pr$run(host='0.0.0.0', port=8000)
    ```
 
-3. The API will start listening on all network interfaces (0.0.0.0) at port 8000.
+3. The API listens on all network interfaces (0.0.0.0) at port 8000.
 
 4. Access the Swagger UI at: http://localhost:8000/__swagger__/
-  
+
+### Using Docker
+
+1. Build the Docker image (run once):
+
+   ```bash 
+   docker build -t fer-api:1.0 api/
+   ```
+
+2. Run the container:
+
+   ```bash 
+   docker run -d -p 8000:8000 fer-api:1.0
+   ```
+
+3. The API listens on all network interfaces (0.0.0.0) at port 8000.
+
+4. Access the Swagger UI at: http://localhost:8000/__swagger__/
+
+### API Structure
+
+Health check: /health
+
+Swagger UI: /__docs__/
+
+Prediction endpoint: /predict
 ---
 
 ## 📄 License and Dataset
