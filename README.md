@@ -99,6 +99,7 @@ Health check: /health
 Swagger UI: /__docs__/
 
 Prediction endpoint: /predict
+
 ---
 
 ## 📄 License and Dataset
