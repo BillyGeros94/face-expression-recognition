@@ -9,95 +9,133 @@ source("model_evaluation.R")
 source("clustering.R")
 
 # Install and load packages
-install_and_load(packages)
+install_and_load_from_file("../packages.txt")
+
+GLOBAL_SEED <- 42
 
 # Load data
-Facial_data <- load_data()
+Facial_data <- load_data(file_path = "../data/cohn-kanade-rev_new.xls")
 
 # Class Distribution
 plot_class_distribution(Facial_data)
 
 # Extract the feature data
-features_data <- Facial_data[, 1:25]
-labels <- Facial_data$Expression
-                       
-# Check for missing values
+numeric_cols <- names(Facial_data)[sapply(Facial_data, is.numeric)]
+features_data <- Facial_data[, numeric_cols[1:25], drop = FALSE]
+labels <- as.factor(Facial_data$Expression)
+features_data = cbind(features_data, Expression = labels)
+
+# Missing Values
 count_missing(features_data)
 
-# Outlier detection and fixing
-outlier_diagnostics(features_data)
-
-hist(features_data$R3, main = "Histogram of R3", col = "lightblue", breaks = 30)
-plot(density(features_data$R3), main = "Density Plot of R3", col = "red", lwd = 2)
-
-features_data <- outlier_fix(features_data)
-
-hist(features_data$R3, main = "Histogram of R3", col = "lightblue", breaks = 30)
-plot(density(features_data$R3), main = "Density Plot of R3", col = "red", lwd = 2)
-
-outlier_diagnostics(features_data)
-
-# Apply Winsorization
-features_data <- Winsorization(features_data)
-
-# Pairwise scatter plots for feature groups
-pairwise_plot_group(features_data, "Left_Eyebrow")
-pairwise_plot_group(features_data, "Right_Eyebrow")
-pairwise_plot_group(features_data, "Left_Eye")
-pairwise_plot_group(features_data, "Right_Eye")
-pairwise_plot_group(features_data, "Mouth")
-pairwise_plot_group(features_data, "Relationships")
-
-# Boxplots for features per Expression
-plot_expression_group(Facial_data,"H1-H6")
-plot_expression_group(Facial_data,"H7-H12")
-plot_expression_group(Facial_data,"H13-L3")
-plot_expression_group(Facial_data,"W")
-plot_expression_group(Facial_data,"R")
-
-# Correlation analysis
-cor_results <- cor_analysis(features_data)
-
-# ANOVA analysis
-data_for_anova <- cbind(features_data, Expression = labels)
-anova_results <- anova_analysis(data_for_anova)
-
-# Extract relevant variables from the results
-features_to_remove <- cor_results$features_to_remove
-significant_features <- anova_results$significant_features
-
-# Final features after excluding highly correlated ones
-final_features <- setdiff(significant_features, features_to_remove)
-print("Final selected features after combining correlation and ANOVA results:")
-print(final_features)
-
-# Create new data frame with only the selected features
-final_data <- features_data[, final_features]
-
-# Boxplot to check for outliers in the final features
-boxplot(final_data, main = "Final Selected Features", col = "lightblue", las = 2)
-
-final_data = cbind(final_data, Expression = labels)
-
 # Split the dataset (80% train, 20% test)
-split_result <- split_process(final_data)
+split_result <- split_process(features_data, seed = GLOBAL_SEED)
 
 train_data <- split_result$train_data
 test_data <- split_result$test_data
 
+# Pairwise scatter plots for feature groups
+pairwise_plot_group(train_data, "Left_Eyebrow")
+pairwise_plot_group(train_data, "Right_Eyebrow")
+pairwise_plot_group(train_data, "Left_Eye")
+pairwise_plot_group(train_data, "Right_Eye")
+pairwise_plot_group(train_data, "Mouth")
+pairwise_plot_group(train_data, "Relationships")
+
+# Boxplots for features per Expression
+plot_expression_group(train_data,"H1-H6")
+plot_expression_group(train_data,"H7-H12")
+plot_expression_group(train_data,"H13-L3")
+plot_expression_group(train_data,"W")
+plot_expression_group(train_data,"R")
+
+# Outlier detection R3
+outlier_diagnostics(train_data, col_name = "R3")
+
+hist(train_data$R3, main = "Histogram of R3", col = "lightblue", breaks = 30)
+plot(density(train_data$R3), main = "Density Plot of R3", col = "red", lwd = 2)
+
+# R3 outlier fix
+r3_upper <- iqr_lim(train_data,col_name = "R3")
+train_data <- iqr_outlier_fix(train_data, r3_upper, col_name = "R3")
+test_data <- iqr_outlier_fix(test_data,  r3_upper, col_name = "R3")
+
+hist(train_data$R3, main = "Histogram of R3 (Fixed)", col = "lightblue", breaks = 30)
+plot(density(train_data$R3), main = "Density Plot of R3 (Fixed)", col = "red", lwd = 2)
+
+# Apply Winsorization on data
+winsor_bounds <- wins_lim(train_data)
+train_data <- apply_winsor(train_data, winsor_bounds)
+test_data  <- apply_winsor(test_data,  winsor_bounds)
+
+# ANOVA analysis
+data_for_anova <- cbind(train_data)
+anova_results <- anova_analysis(data_for_anova)
+
+# candidate features are those significant by ANOVA (raw p < 0.05)
+candidate_features <- anova_results$significant_features
+if (length(candidate_features) == 0) {
+  stop("No candidate features found by ANOVA — check your data or ANOVA threshold.")
+}
+pvals <- anova_results$p_values
+
+# Correlation analysis
+cor_results <- cor_analysis(train_data[, candidate_features, drop = FALSE], 
+                            p_values = pvals[candidate_features])
+
+# Final features after excluding highly correlated ones
+final_features <- setdiff(candidate_features, cor_results$features_to_remove)
+if (length(final_features) == 0) {
+  stop("No final features left after correlation pruning — relax thresholds or review p-values.")
+}
+print("Final selected features after combining ANOVA and correlation results:")
+print(final_features)
+
+# Data checks
+length(final_features)
+setdiff(final_features, names(train_data))
+setdiff(final_features, names(test_data))
+
+# Create new data frame with only the selected features
+train_final_features <- train_data[, final_features]
+test_final_features <- test_data[, final_features]
+
+# Boxplot to check for outliers in the final features
+boxplot(train_final_features, main = "Final Selected Features", col = "lightblue", las = 2)
+
+train_final <- cbind(train_final_features, Expression = train_data$Expression)
+test_final <- cbind(test_final_features, Expression = test_data$Expression)
+
+# Data Checks
+sapply(train_final_features, function(x) is.numeric(x))
+sum(is.na(train_final))
+sum(is.na(test_final))
+table(train_final$Expression)
+table(test_final$Expression)
+
 # Perform PCA
-pca_result <- pca_process(split_result$train_data, split_result$test_data)
+pca_result <- pca_process(train_final, test_final)
+
+if (is.null(pca_result$num_pcs) || is.na(pca_result$num_pcs) || pca_result$num_pcs < 1) {
+  stop("PCA did not select any principal components. Check var_threshold or feature scaling.")
+}
 
 train_pca <- pca_result$train_pca
 test_pca <- pca_result$test_pca
 
+# Data checks
+is.factor(train_pca$Expression)
+is.factor(test_pca$Expression)
+identical(levels(train_pca$Expression), levels(test_pca$Expression))
+
 # Train Models with PCA
-models_pca <- train_models(train_pca)
+models_pca <- train_models(train_pca, global_seed = GLOBAL_SEED)
 
 # Evaluate models
-nb_results <- evaluate_model(models_pca$nb, test_pca)
-dt_results <- evaluate_model(models_pca$dt, test_pca)
-knn_results <- evaluate_model(models_pca$knn, test_pca)
+train_levels <- levels(train_pca$Expression)
+nb_results <- evaluate_model(models_pca$nb, test_pca, train_levels = train_levels)
+dt_results <- evaluate_model(models_pca$dt, test_pca, train_levels = train_levels)
+knn_results <- evaluate_model(models_pca$knn, test_pca, train_levels = train_levels)
 
 # Combine all metrics into a data frame for comparison
 metrics <- data.frame(
@@ -146,7 +184,6 @@ for (i in 1:ncol(pred_probs)) {
   hist(pred_probs[, i], main = colnames(pred_probs)[i], xlab = "Probability", col = "lightblue", border = "black")
 }
 
-
 # Compute confusion matrices after PCA
 nb_cm <- confusionMatrix(predict(models_pca$nb, test_pca), test_pca$Expression)
 dt_cm <- confusionMatrix(predict(models_pca$dt, test_pca), test_pca$Expression)
@@ -163,15 +200,13 @@ cat("\nConfusion Matrix for KNN:\n")
 print(knn_cm$table)
 
 # Train Models without PCA
-models_raw <- train_models(train_data)
+models_raw <- train_models(train_final, global_seed = GLOBAL_SEED)
 
 # Evaluate models
-nb_before_results <- evaluate_model(models_raw$nb, test_data)
-dt_before_results <- evaluate_model(models_raw$dt, test_data)
-knn_before_results <- evaluate_model(models_raw$knn, test_data)
-
-# Save the model to disk
-saveRDS(models_raw$knn, "./PrePCA_KNN.rds")
+train_levels_raw <- levels(train_final$Expression)
+nb_before_results <- evaluate_model(models_raw$nb, test_final,train_levels = train_levels_raw)
+dt_before_results <- evaluate_model(models_raw$dt, test_final,train_levels = train_levels_raw)
+knn_before_results <- evaluate_model(models_raw$knn, test_final,train_levels = train_levels_raw)
 
 # Combine all metrics into a data frame for comparison
 metrics_before <- data.frame(
@@ -213,7 +248,7 @@ rpart.plot(models_raw$dt$finalModel,
 
 
 # Get probabilities for each class before PCA
-pred_probs_before <- predict(models_raw$nb, newdata = test_data, type = "prob")
+pred_probs_before <- predict(models_raw$nb, newdata = test_final, type = "prob")
 
 # Histogram for each class
 par(mfrow = c(2, 4))
@@ -222,9 +257,9 @@ for (i in 1:ncol(pred_probs_before)) {
 }
 
 # Compute confusion matrices before PCA
-nb_cm_before <- confusionMatrix(predict(models_raw$nb, test_data), test_data$Expression)
-dt_cm_before <- confusionMatrix(predict(models_raw$dt, test_data), test_data$Expression)
-knn_cm_before <- confusionMatrix(predict(models_raw$knn, test_data), test_data$Expression)
+nb_cm_before <- confusionMatrix(predict(models_raw$nb, test_final), test_final$Expression)
+dt_cm_before <- confusionMatrix(predict(models_raw$dt, test_final), test_final$Expression)
+knn_cm_before <- confusionMatrix(predict(models_raw$knn, test_final), test_final$Expression)
 
 # Print confusion matrices
 cat("\nConfusion Matrix for Naive Bayes:\n")
@@ -238,19 +273,66 @@ print(knn_cm_before$table)
 
 par(mfrow = c(1, 1))
 
-# Remove Expressions column
-features_only <- final_data[, -which(names(final_data) == "Expression")]
+saveRDS(models_pca$knn, "../artifacts/models/knn_pca.rds")
+saveRDS(models_pca$dt,  "../artifacts/models/dt_pca.rds")
+saveRDS(models_pca$nb,  "../artifacts/models/nb_pca.rds")
 
-# Perform PCA
-pca_results <- pca_transform(features_only)
-pca_data <- pca_results$pca_data
+saveRDS(models_raw$knn, "../artifacts/models/knn_raw.rds")
+saveRDS(models_raw$dt,  "../artifacts/models/dt_raw.rds")
+saveRDS(models_raw$nb,  "../artifacts/models/nb_raw.rds")
 
-# Apply K-means
-cluster(pca_data, method = "kmeans")
+# save PCA object
+saveRDS(pca_result$pca_model, "../artifacts/models/pca_model.rds")
 
-# Apply GMM
-cluster(pca_data, method = "gmm")
+# Minimal metadata 
+metadata <- list(
+  saved_at = Sys.time(),
+  seed = GLOBAL_SEED,
+  final_features = final_features,
+  anova_candidate_features = candidate_features,
+  winsor_bounds = winsor_bounds,
+  r3_upper = r3_upper,
+  pca_num_pcs = pca_result$num_pcs,
+  train_levels = levels(train_final$Expression),
+  models = list(
+    knn_pca = "../artifacts/models/knn_pca.rds",
+    dt_pca  = "../artifacts/models/dt_pca.rds",
+    nb_pca  = "../artifacts/models/nb_pca.rds",
+    knn_raw = "../artifacts/models/knn_raw.rds",
+    dt_raw  = "../artifacts/models/dt_raw.rds",
+    nb_raw  = "../artifacts/models/nb_raw.rds"
+  ),
+  session_info = capture.output(sessionInfo())
+)
 
-# Apply DBSCAN
-cluster(pca_data, method = "dbscan")
+saveRDS(metadata, "../artifacts/models/metadata.rds")
 
+if (requireNamespace("jsonlite", quietly = TRUE)) {
+  jsonlite::write_json(metadata, "../artifacts/models/metadata.json", pretty = TRUE, auto_unbox = TRUE)
+}
+
+cluster_data <- rbind(train_final_features, test_final_features)
+pca_cluster_data <- pca_transform(cluster_data, var_threshold = 0.8)
+pca_data <- pca_cluster_data$pca_data
+
+labels_all <- c(as.character(train_final$Expression), as.character(test_final$Expression))
+k_value <- length(unique(labels_all))
+
+# kmeans clustering 
+res_km <- cluster(pca_data, true_labels = labels_all, method = "kmeans", k = k_value)
+print(res_km$silhouette_avg)
+print(res_km$ARI)
+print(res_km$confusion)
+
+# GMM clustering
+res_gmm <- cluster(pca_data, true_labels = labels_all, method = "gmm", k = k_value)
+print(res_gmm$silhouette_avg) 
+print(res_gmm$ARI) 
+print(res_gmm$confusion)
+
+# DBSCAN clustering
+res_dbscan <- cluster(pca_data, true_labels = labels_all, method = "dbscan", 
+                      eps = 1.5, minPts = 5)
+print(res_dbscan$silhouette_avg) 
+print(res_dbscan$ARI) 
+print(res_dbscan$confusion)

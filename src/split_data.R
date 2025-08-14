@@ -1,4 +1,4 @@
-split_process <- function(final_data, target_col = "Expression", train_frac = 0.8, seed = 123) {
+split_process <- function(final_data, target_col = "Expression", train_frac = 0.8, seed) {
   
   # Set seed for reproducibility
   set.seed(seed)

@@ -1,56 +1,74 @@
-cluster <- function(pca_data, method = c("kmeans", "gmm", "dbscan"),
-                           k = 4, eps = 1.5, minPts = 5) {
+cluster <- function(pca_data, true_labels = NULL, method = c("kmeans", "gmm", "dbscan"),
+                         k = NA, eps = NA, minPts = NA) {
   
-  method <- match.arg(method)
-  dist_mat <- dist(pca_data)
+    method <- match.arg(method)
+    X <- as.data.frame(pca_data)
+    dist_mat <- dist(X)
+    
+    # Check for required parameters based on the method
+    if (method %in% c("kmeans", "gmm") && is.na(k)) {
+      stop("For 'kmeans' and 'gmm' methods, the number of clusters 'k' must be specified.")
+    }
+    
+    if (method == "dbscan" && (is.na(eps) || is.na(minPts))) {
+      stop("For 'dbscan' method, 'eps' and 'minPts' must be specified.")
+    }
   
-  if (method == "kmeans") {
+    out <- list()
+    clusters <- NULL
+    sil <- NA
+    sil_avg <- NA
     
-    # Apply K-means
-    kmeans_result <- kmeans(pca_data, centers = k, nstart = 25)
+    if (method == "kmeans") {
+        set.seed(42)
+        km <- kmeans(X, centers = k, nstart = 25)
+        clusters <- km$cluster
+        sil <- silhouette(clusters, dist_mat)
+        sil_avg <- if (is.matrix(sil)) mean(sil[, 3]) else NA
+        out$object <- km
     
-    # Visualize the clusters
-    print(fviz_cluster(kmeans_result, data = pca_data, main = paste("K-means Clustering (k =", k, ")")))
+    } else if (method == "gmm") {
+        gmm <- Mclust(X, G = k)
+        clusters <- gmm$classification
+        sil <- silhouette(clusters, dist_mat)
+        sil_avg <- if (is.matrix(sil)) mean(sil[, 3]) else NA
+        out$object <- gmm
     
-    # Evaluate using Silhouette Score
-    silhouette_score <- silhouette(kmeans_result$cluster, dist_mat)
-    print(summary(silhouette_score))
+    } else if (method == "dbscan") {
+        db <- dbscan(X, eps = eps, minPts = minPts)
+        clusters <- db$cluster
+        
+        # remove noise (cluster 0)
+        if (any(clusters == 0)) {
+            keep <- clusters != 0
+            if (sum(keep) > 2) {
+                sil <- silhouette(clusters[keep], dist(X[keep, , drop = FALSE]))
+                sil_avg <- if (is.matrix(sil)) mean(sil[, 3]) else NA
+            } else {
+                sil <- NA 
+                sil_avg <- NA
+            }
+        } else {
+            sil <- silhouette(clusters, dist_mat)
+            sil_avg <- if (is.matrix(sil)) mean(sil[, 3]) else NA
+            }
+        out$object <- db
+    }
     
-    cat("\nConfusion Matrix (K-means):\n")
-    print(table(Cluster = kmeans_result$cluster, Label = labels))
+    out$clusters <- clusters
+    out$silhouette <- sil
+    out$silhouette_avg <- sil_avg
     
-  } else if (method == "gmm") {
+    # True-label comparisons
+    if (!is.null(true_labels)) {
+        if (length(true_labels) != length(clusters)) stop("true_labels length must match pca_data rows")
+            out$ARI <- adjustedRandIndex(as.integer(factor(true_labels)), as.integer(factor(clusters)))
+            out$confusion <- table(Cluster = clusters, Label = true_labels)
+        } else {
+            out$ARI <- NA
+            out$confusion <- NULL
+        }
     
-    # Apply GMM
-    gmm_result <- Mclust(pca_data)
-    
-    # Visualize the clusters
-    print(fviz_cluster(gmm_result, data = pca_data, main = "GMM Clustering"))
-    
-    # Evaluate using Silhouette Score
-    gmm_clusters <- gmm_result$classification
-    silhouette_score_gmm <- silhouette(gmm_clusters, dist_mat)
-    print(summary(silhouette_score_gmm))
-    
-    cat("\nConfusion Matrix (GMM):\n")
-    print(table(Cluster = gmm_clusters, Label = labels))
-    
-  } else if (method == "dbscan") {
-    
-    # Apply DBSCAN
-    dbscan_result <- dbscan(pca_data, eps = eps, minPts = minPts)
-    
-    # Visualize the clusters
-    print(fviz_cluster(dbscan_result, data = pca_data, main = "DBSCAN Clustering"))
-    
-    # Evaluate based on number of clusters (and noise points)
-    table(dbscan_result$cluster)
-    
-    # Evaluate using Silhouette Score
-    silhouette_score_dbscan <- silhouette(dbscan_result$cluster, dist_mat)
-    print(summary(silhouette_score_dbscan))
-    
-    cat("\nConfusion Matrix (DBSCAN):\n")
-    print(table(Cluster = dbscan_result$cluster, Label = labels))
-  }
+    return(out)
+
 }

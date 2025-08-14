@@ -1,9 +1,10 @@
-load_data <- function() {
-  # Set up a path to read the file
-  path <- file.choose()
+load_data <- function(file_path) {
+ 
+    if (!file.exists(file_path)) stop("Data file not found: ", file_path) 
   
-  # Read the file
-  Facial_data  <- read_excel(path)
-  
-  return(Facial_data)
+    # Read the file
+    Facial_data  <- read_excel(file_path)
+ 
+    return(as.data.frame(Facial_data))
+
 }
