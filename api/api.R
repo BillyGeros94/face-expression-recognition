@@ -1,62 +1,59 @@
 #* @apiTitle Facial Expression Recognition via Measurable Features
-
-#* @apiDescription This API utilizes a KNN model to predict facial expressions based 
-#* on the 16 most meaningful numerical features
+#* @apiDescription This API utilizes a KNN model to predict facial expressions 
+#* based on the trained features.
 
 library(plumber)
 
-model <- readRDS("./PrePCA_KNN.rds")
+# Artifacts paths
+MODEL_PATH <- "../artifacts/models/knn_raw.rds"
+META_PATH  <- "../artifacts/models/metadata.rds"
 
+# Data load
+model <- readRDS(MODEL_PATH)
+metadata <- readRDS(META_PATH)
+
+# Expected features and levels
+expected_features <- as.character(metadata$final_features)
+train_levels <- metadata$train_levels
+
+#* Health
 #* @get /health
-function(){
-  
-  res <- list(
-    status_code = 200,
-    status = "success",
-    message = "The API is up and running."
-  )
-  
-  return(res)
+function() {
+    list(status = "ok", message = "API running")
 }
 
-#* @param H1 Height of the inner left eyebrow
-#* @param H2 Height of the middle left eyebrow
-#* @param H3 Height of the outer left eyebrow
-#* @param L1 Length of the left eyebrow
-#* @param H5 Height of the inner right eyebrow
-#* @param H6 Height of the middle right eyebrow
-#* @param H7 Height of the outer right eyebrow
-#* @param H8 Height of the right eyebrow tip
-#* @param L2 Length of the right eyebrow
-#* @param H10 Height of the right eye center
-#* @param W2 Width of the right eye
-#* @param H15 Height of the center of the mouth
-#* @param W3 Width of the mouth
-#* @param R1 Distance between the eyebrows
-#* @param R2 Distance between eyes and mouth
-#* @param R4 Distance between eye centers
-
-
-
+#* Predict
 #* @post /predict
-function (H1, H2, H3, L1, H5, H6, H7, H8, L2, H10, W2, H15, W3, R1, R2, R4){
+function(H3 = NULL, L1 = NULL, H5 = NULL, H7 = NULL, H8 = NULL,
+         W2 = NULL, L3 = NULL, R1 = NULL, R3 = NULL, R4 = NULL, res) {
   
-  values <- c(H1, H2, H3, L1, H5, H6, H7, H8, L2, H10, W2, H15, W3, R1, R2, R4)
+    params <- list(H3 = H3, L1 = L1, H5 = H5, H7 = H7, H8 = H8,
+                 W2 = W2, L3 = L3, R1 = R1, R3 = R3, R4 = R4)
   
-  if (any(is.na(suppressWarnings(as.numeric(values))))) {
-    return(list(error = "All parameters must be numeric."))
-  }
+    # Convert each param to numeric
+    numeric_vec <- vapply(params, function(x) {
+    if (is.null(x)) return(NA_real_)
+        suppressWarnings(as.numeric(x))
+    }, numeric(1))
   
-  data <- data.frame(H1 = as.numeric(H1), H2 = as.numeric(H2), H3 = as.numeric(H3), 
-                        L1 = as.numeric(L1), H5 = as.numeric(H5), H6 = as.numeric(H6),
-                        H7 = as.numeric(H7), H8 = as.numeric(H8), L2 = as.numeric(L2),
-                        H10 = as.numeric(H10), W2 = as.numeric(W2), H15 = as.numeric(H15),
-                        W3 = as.numeric(W3), R1 = as.numeric(R1), R2 = as.numeric(R2),
-                        R4 = as.numeric(R4))
+    # Detect non-numeric inputs or missing
+    if (any(is.na(numeric_vec))) {
+        bad <- names(numeric_vec)[is.na(numeric_vec)]
+        res$status <- 400
+        return(list(error = "All parameters must be numeric and provided.",
+                missing_or_non_numeric = bad))
+    }
   
-  prediction <- predict(model, data)
+    # Build single-row data.frame with correct names
+    df <- as.data.frame(as.list(numeric_vec), stringsAsFactors = FALSE)
   
-  return(list(
-    prediction = as.character(prediction)
-  ))
-}
+    # Order columns exactly as during training 
+    df <- df[, expected_features, drop = FALSE]
+  
+    # Prediction
+    pred <- predict(model, df)
+    probs <- predict(model, df, type = "prob")
+  
+    return(list(prediction = as.character(pred), 
+                probabilities = as.list(as.data.frame(probs))))
+ }
