@@ -1,114 +1,195 @@
 # Facial Expression Recognition via Measurable Features
 
-A machine learning pipeline for classifying facial expressions using interpretable geometric features extracted from the Cohn-Kanade dataset. Fully implemented in R as part of an MSc project on supervised and unsupervised learning.
+## 📌 Project Overview
+This project implements a complete **Data Science and Machine Learning pipeline** for recognizing human facial expressions based on measurable facial features. Using the **Cohn-Kanade dataset**, we extract 25 anthropometric measurements from key facial landmarks and classify them into one of seven emotional states.
+
+The workflow covers **data preprocessing**, **feature selection**, **dimensionality reduction**, **model training and evaluation**, and the deployment of a **REST API** using [Plumber](https://www.rplumber.io/) in R, containerized via Docker.
 
 ---
 
-## 🎓 Academic Context
-
-This project was completed as part of the **DAMA 51 – Foundations in Computer Science** module  
-in the MSc program **Data Science and Machine Learning** at the **Hellenic Open University (HOU)**.
-
-- 🔗 [MSc program overview](https://www.eap.gr/en/data-science-and-machine-learning/)  
-- 📚 [Full list of modules](https://www.eap.gr/en/data-science-and-machine-learning/topics/)  
-- 📄 [DAMA 51 module description](https://www.eap.gr/en/data-science-and-machine-learning/topics/#dama51)
+## 🎯 Objectives
+- Process and analyze raw anthropometric facial data.
+- Identify the most relevant features for expression recognition.
+- Evaluate multiple supervised learning models before and after PCA.
+- Apply unsupervised clustering for exploratory analysis.
+- Deploy the best-performing model as a REST API.
 
 ---
 
-## 📁 Project Structure
-
-- `data/` – Cleaned dataset of facial expression measurements  
-- `src/` – Modular R scripts: preprocessing, modeling, evaluation  
-- `report/` – Full analytical report (PDF)  
-- `presentation/` – Slide deck summarizing methods and results (PowerPoint)
-- `api/` – API folder containing the serialized model and Plumber API script
-
----
-
-## 📊 Dataset Overview
-
-- **Instances:** 210  
-- **Features:** 25 geometric features (distances and angles) derived from facial landmarks  
-- **Labels:** 7 emotions – Anger, Disgust, Fear, Happiness, Sadness, Surprise, Neutral  
-
----
-
-## 🧠 Machine Learning Pipeline
-
-- **Preprocessing:** Outlier capping, Winsorization, ANOVA for feature selection, PCA for dimensionality reduction  
-- **Supervised Models:** Naïve Bayes, Decision Tree, K-Nearest Neighbors (KNN)  
-- **Unsupervised Methods:** K-Means clustering, Gaussian Mixture Models (GMM), DBSCAN  
-- **Evaluation Metrics:** Accuracy, Precision, Recall, F1-score, Confusion Matrices, Silhouette Scores  
-
-> 📌 See `report/` and `presentation/` for detailed methodology, results, and interpretation.
-
----
-
-## 🚀 How to Run
-
-1. Open RStudio in the project root directory  
-2. Run the main script `src/main.R` to execute the full pipeline  
-3. Ensure the required packages are installed:  
-   - `readxl`, `caret`, `rpart`, `rpart.plot`, `dbscan`, `mclust`, `cluster`, `factoextra`  
-4. See `src/setup.R` for package installation helper function  
+## 📂 Repository Structure
+```
+my_project/
+├─ data/                         # Dataset(s)
+│  └─ cohn-kanade-rev_new.xls
+├─ src/                          # R scripts for each pipeline step
+│  ├─ main.R
+│  ├─ setup.R
+│  ├─ load_data.R
+│  ├─ preprocessing.R
+│  ├─ feature_selection.R
+│  ├─ split_data.R
+│  ├─ pca.R
+│  ├─ model_training.R
+│  ├─ model_evaluation.R
+│  └─ clustering.R
+├─ artifacts/                    # Saved plots and trained models
+│  ├─ plots/
+│  └─ models/
+├─ packages.txt                  # List of required R packages
+├─ README.md                     # Project documentation
+├─ report/                       # Final written report
+│  └─ Project-Report.pdf
+├─ presentation/                 # Final presentation slides
+│  └─ Project-Presentation.pptx
+├─ api/                          # REST API deployment files
+│  ├─ api.R
+│  └─ Dockerfile
+```
 
 ---
 
-## ⚙️ API Usage
-
-This project includes a **Plumber-based API** for real-time facial expression prediction using the trained KNN model.
-
-### Locally (R Session)
-
-1. Make sure the **R package `plumber`** is installed.
-
-2. Run the API script located in the api/ folder inside an interactive R session (R console or RStudio):
-   
-   ```r
-   library(plumber)
-   pr <- plumb('path/to/api/api.R')
-   pr$run(host='0.0.0.0', port=8000)
-   ```
-
-3. The API listens on all network interfaces (0.0.0.0) at port 8000.
-
-4. Access the Swagger UI at: http://localhost:8000/__swagger__/
-
-### Using Docker
-
-1. Build the Docker image (run once):
-
-   ```bash 
-   docker build -t fer-api:1.0 api/
-   ```
-
-2. Run the container:
-
-   ```bash 
-   docker run -d -p 8000:8000 fer-api:1.0
-   ```
-
-3. The API listens on all network interfaces (0.0.0.0) at port 8000.
-
-4. Access the Swagger UI at: http://localhost:8000/__swagger__/
-
-### API Structure
-
-Health check: /health
-
-Swagger UI: /__docs__/
-
-Prediction endpoint: /predict
+## 📊 Dataset
+- **Source**: Cohn-Kanade Database (modified subset).
+- **Size**: 210 instances, 25 measurable features, 7 emotion classes.
+- **Features**: Distances and angles from facial landmarks (eyebrows, eyes, mouth).
+- **Labels**: `ANGER`, `DISGUST`, `FEAR`, `JOY`, `NEUTRAL`, `SADNESS`, `SURPRISE`.
 
 ---
 
-## 📄 License and Dataset
+## 🔬 Methodology
 
+### **1. Data Preprocessing**
+- Missing value check (none found).
+- Outlier capping via IQR-based Winsorization.
+- Exploratory Data Analysis with boxplots and pairwise scatterplots.
+
+### **2. Feature Selection**
+- Statistical selection using ANOVA (`p < 0.05`).
+- Remove highly correlated features (`correlation > 0.8`).
+- Final selection of 16 features.
+
+### **3. Dimensionality Reduction (PCA)**
+- Retained enough components to explain 80% variance.
+- PCA reduced dimensionality but degraded classifier performance.
+
+### **4. Supervised Learning**
+Models tested (with and without PCA):
+- **Naïve Bayes**
+- **Decision Tree**
+- **KNN** (best-performing model)
+
+Evaluation:
+- Repeated 10-fold cross-validation.
+- Metrics: Accuracy, Precision, Recall, F1-score.
+
+### **5. Unsupervised Learning**
+- Algorithms: K-Means, Gaussian Mixture Models (GMM), DBSCAN.
+- Metrics: Silhouette score, ARI, confusion matrices.
+- Finding: Best separation for `SURPRISE`, poor for negative emotions.
+
+---
+
+## 🚀 Model Deployment
+The **KNN** model was deployed as a REST API using [Plumber](https://www.rplumber.io/) and containerized with Docker.
+
+**API Endpoints:**
+- `GET /health` – Health check endpoint.
+- `POST /predict` – Takes facial measurements and returns predicted emotion and probabilities.
+
+Example request (JSON):
+```json
+{
+  "H3": 19,
+  "L1": 38,
+  "H5": 20,
+  "H7": 16,
+  "H8": 23,
+  "W2": 10,
+  "L3": 24,
+  "R1": 33,
+  "R3": 14,
+  "R4": 73
+}
+```
+
+Example response:
+```json
+{
+  "prediction": "NEUTRAL",
+  "probabilities": {
+    "ANGER": 0.0,
+    "DISGUST": 0.0,
+    "FEAR": 0.0,
+    "JOY": 0.0,
+    "NEUTRAL": 1.0,
+    "SADNESS": 0.0,
+    "SURPRISE": 0.0
+  }
+}
+```
+
+---
+
+## 🐳 Running with Docker
+Build the Docker image:
+```bash
+docker build -t face-expression-api ./api
+```
+Run the container:
+```bash
+docker run -p 8000:8000 face-expression-api
+```
+
+The API will be available at:
+```
+http://localhost:8000
+```
+
+---
+
+## 📦 Installation & Requirements
+**R version**: ≥ 4.2.0  
+Install required packages:
+```r
+install.packages(scan("packages.txt", what = character()))
+```
+
+---
+
+## 📑 Deliverables
+- **`src/`** – Full modular pipeline in R.
+- **`artifacts/models/`** – Trained models and metadata.
+- **`artifacts/plots/`** – Visualization outputs.
+- **`report/Project-Report.pdf`** – Final written report.
+- **`presentation/Project-Presentation.pptx`** – Presentation slides.
+- **`api/`** – REST API implementation and Docker setup.
+
+---
+
+## 🧠 Key Findings
+- PCA reduced model performance for this dataset.
+- KNN outperformed Naïve Bayes and Decision Tree.
+- Clustering methods failed to cleanly separate negative emotions.
+- SURPRISE was the most easily distinguishable emotion.
+
+---
+
+## 📜 License
 This repository and its contents are for academic and non-commercial use only.
 
 The dataset features are derived from the [Cohn-Kanade Facial Expression Database](https://www.pitt.edu/~emotion/ck-spread.htm).  
 Original facial images are not included and remain subject to the original dataset’s licensing terms.
 
 For dataset access and licensing details, consult the dataset owners’ website.
+
+---
+
+## Academic Context
+This project was completed as part of the **DAMA 51 – Foundations in Computer Science** module  
+in the MSc program **Data Science and Machine Learning** at the **Hellenic Open University (HOU)**.
+
+- 🔗 [MSc program overview](https://www.eap.gr/en/data-science-and-machine-learning/)  
+- 📚 [Full list of modules](https://www.eap.gr/en/data-science-and-machine-learning/topics/)  
+- 📄 [DAMA 51 module description](https://www.eap.gr/en/data-science-and-machine-learning/topics/#dama51)
 
 ---
