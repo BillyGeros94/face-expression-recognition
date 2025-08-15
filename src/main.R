@@ -273,16 +273,16 @@ print(knn_cm_before$table)
 
 par(mfrow = c(1, 1))
 
-saveRDS(models_pca$knn, "../artifacts/models/knn_pca.rds")
-saveRDS(models_pca$dt,  "../artifacts/models/dt_pca.rds")
-saveRDS(models_pca$nb,  "../artifacts/models/nb_pca.rds")
+saveRDS(models_pca$knn, "artifacts/models/knn_pca.rds")
+saveRDS(models_pca$dt,  "artifacts/models/dt_pca.rds")
+saveRDS(models_pca$nb,  "artifacts/models/nb_pca.rds")
 
-saveRDS(models_raw$knn, "../artifacts/models/knn_raw.rds")
-saveRDS(models_raw$dt,  "../artifacts/models/dt_raw.rds")
-saveRDS(models_raw$nb,  "../artifacts/models/nb_raw.rds")
+saveRDS(models_raw$knn, "artifacts/models/knn_raw.rds")
+saveRDS(models_raw$dt,  "artifacts/models/dt_raw.rds")
+saveRDS(models_raw$nb,  "artifacts/models/nb_raw.rds")
 
 # save PCA object
-saveRDS(pca_result$pca_model, "../artifacts/models/pca_model.rds")
+saveRDS(pca_result$pca_model, "artifacts/models/pca_model.rds")
 
 # Minimal metadata 
 metadata <- list(
@@ -295,20 +295,20 @@ metadata <- list(
   pca_num_pcs = pca_result$num_pcs,
   train_levels = levels(train_final$Expression),
   models = list(
-    knn_pca = "../artifacts/models/knn_pca.rds",
-    dt_pca  = "../artifacts/models/dt_pca.rds",
-    nb_pca  = "../artifacts/models/nb_pca.rds",
-    knn_raw = "../artifacts/models/knn_raw.rds",
-    dt_raw  = "../artifacts/models/dt_raw.rds",
-    nb_raw  = "../artifacts/models/nb_raw.rds"
+    knn_pca = "artifacts/models/knn_pca.rds",
+    dt_pca  = "artifacts/models/dt_pca.rds",
+    nb_pca  = "artifacts/models/nb_pca.rds",
+    knn_raw = "artifacts/models/knn_raw.rds",
+    dt_raw  = "artifacts/models/dt_raw.rds",
+    nb_raw  = "artifacts/models/nb_raw.rds"
   ),
   session_info = capture.output(sessionInfo())
 )
 
-saveRDS(metadata, "../artifacts/models/metadata.rds")
+saveRDS(metadata, "artifacts/models/metadata.rds")
 
 if (requireNamespace("jsonlite", quietly = TRUE)) {
-  jsonlite::write_json(metadata, "../artifacts/models/metadata.json", pretty = TRUE, auto_unbox = TRUE)
+  jsonlite::write_json(metadata, "artifacts/models/metadata.json", pretty = TRUE, auto_unbox = TRUE)
 }
 
 cluster_data <- rbind(train_final_features, test_final_features)
