@@ -153,6 +153,9 @@ Install required packages:
 ```r
 install.packages(scan("packages.txt", what = character()))
 ```
+**Reproducible environment**  
+This project uses `renv` for R package management. After cloning, open the project in RStudio (or run `R -e "renv::restore()"`) to install the exact package versions recorded in `renv.lock`.  
+**R version used**: 4.5.1 (recorded in `renv.lock`) — use the same R base for best compatibility.
 
 ---
 
