@@ -66,7 +66,7 @@ my_project/
 ### **2. Feature Selection**
 - Statistical selection using ANOVA (`p < 0.05`).
 - Remove highly correlated features (`correlation > 0.8`).
-- Final selection of 16 features.
+- Final selection of 10 features.
 
 ### **3. Dimensionality Reduction (PCA)**
 - Retained enough components to explain 80% variance.
