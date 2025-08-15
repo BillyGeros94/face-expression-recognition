@@ -9,12 +9,12 @@ source("model_evaluation.R")
 source("clustering.R")
 
 # Install and load packages
-install_and_load_from_file("../packages.txt")
+install_and_load_from_file("./packages.txt")
 
 GLOBAL_SEED <- 42
 
 # Load data
-Facial_data <- load_data(file_path = "../data/cohn-kanade-rev_new.xls")
+Facial_data <- load_data(file_path = "./data/cohn-kanade-rev_new.xls")
 
 # Class Distribution
 plot_class_distribution(Facial_data)
