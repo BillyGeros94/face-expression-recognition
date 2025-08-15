@@ -133,11 +133,11 @@ Example response:
 ## 🐳 Running with Docker
 Build the Docker image:
 ```bash
-docker build -t face-expression-api ./api
+docker build -t face-expr-api -f api/Dockerfile . 
 ```
 Run the container:
 ```bash
-docker run -p 8000:8000 face-expression-api
+docker run -p 8000:8000 --rm face-expr-api
 ```
 
 The API will be available at:
