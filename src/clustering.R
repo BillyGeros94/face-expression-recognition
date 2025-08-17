@@ -1,8 +1,8 @@
-cluster <- function(pca_data, true_labels = NULL, method = c("kmeans", "gmm", "dbscan"),
+cluster <- function(data, true_labels = NULL, method = c("kmeans", "gmm", "dbscan"),
                          k = NA, eps = NA, minPts = NA) {
   
     method <- match.arg(method)
-    X <- as.data.frame(pca_data)
+    X <- as.data.frame(data)
     dist_mat <- dist(X)
     
     # Check for required parameters based on the method
