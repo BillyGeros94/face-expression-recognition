@@ -5,4 +5,4 @@ rpart.plot
 dbscan
 mclust
 cluster
-factoextra
+kknn
