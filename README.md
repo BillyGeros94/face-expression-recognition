@@ -25,8 +25,7 @@ my_project/
 │  ├─ main.R
 │  ├─ setup.R
 │  ├─ load_data.R
-│  ├─ preprocessing.R
-│  ├─ feature_selection.R
+│  ├─ eda.R
 │  ├─ split_data.R
 │  ├─ pca.R
 │  ├─ model_training.R
@@ -38,9 +37,9 @@ my_project/
 ├─ packages.txt                  # List of required R packages
 ├─ README.md                     # Project documentation
 ├─ report/                       # Final written report
-│  └─ Project-Report.pdf
+│  └─ FER Report.pdf
 ├─ presentation/                 # Final presentation slides
-│  └─ Project-Presentation.pptx
+│  └─ FER Presentation.pptx
 ├─ api/                          # REST API deployment files
 │  ├─ api.R
 │  └─ Dockerfile
@@ -60,17 +59,18 @@ my_project/
 
 ### **1. Data Preprocessing**
 - Missing value check (none found).
-- Outlier capping via IQR-based Winsorization.
+- Stratified train-test split (80%-20%).
 - Exploratory Data Analysis with boxplots and pairwise scatterplots.
 
-### **2. Feature Selection**
-- Statistical selection using ANOVA (`p < 0.05`).
-- Remove highly correlated features (`correlation > 0.8`).
-- Final selection of 10 features.
-
-### **3. Dimensionality Reduction (PCA)**
+### **2. Dimensionality Reduction (PCA)**
+- z-score normalization (standardization) of each feature.
 - Retained enough components to explain 80% variance.
 - PCA reduced dimensionality but degraded classifier performance.
+
+### **3. Feature Selection**
+- Raw Features with Recursive Feature Elimination (RFE) 
+- PCA-Transformed Features with RFE.
+- Final selection of 19 raw features for the model (RFE).
 
 ### **4. Supervised Learning**
 Models tested (with and without PCA):
@@ -94,21 +94,16 @@ The **KNN** model was deployed as a REST API using [Plumber](https://www.rplumbe
 
 **API Endpoints:**
 - `GET /health` – Health check endpoint.
-- `POST /predict` – Takes facial measurements and returns predicted emotion and probabilities.
+- `POST /predict` – Takes all 25 facial measurements and returns predicted emotion and probabilities.
 
 Example request (JSON):
 ```json
 {
-  "H3": 19,
-  "L1": 38,
-  "H5": 20,
-  "H7": 16,
-  "H8": 23,
-  "W2": 10,
-  "L3": 24,
-  "R1": 33,
-  "R3": 14,
-  "R4": 73
+  "H1": 22, "H2": 17, "H3": 19, "H4": 23, "L1": 38,
+  "H5": 20, "H6": 18, "H7": 16, "H8": 23, "L2": 25,
+  "H9": 15, "H10": 19, "W1": 17, "H11": 14, "H12": 17,
+  "W2": 10, "H13": 17, "H14": 16, "H15": 23, "W3": 9,
+  "L3": 24, "R1": 33, "R2": 23, "R3": 14, "R4": 73
 }
 ```
 
@@ -124,6 +119,16 @@ Example response:
     "NEUTRAL": 1.0,
     "SADNESS": 0.0,
     "SURPRISE": 0.0
+  }
+}
+```
+
+If any input is missing or non-numeric, the API returns HTTP 400 with details:
+```json
+{
+  "error": "Invalid input",
+  "details": {
+    "missing_or_non_numeric": ["H1", "R3"]
   }
 }
 ```
@@ -167,8 +172,8 @@ to install the exact package versions recorded in `renv.lock`.
 - **`src/`** – Full modular pipeline in R.
 - **`artifacts/models/`** – Trained models and metadata.
 - **`artifacts/plots/`** – Visualization outputs.
-- **`report/Project-Report.pdf`** – Final written report.
-- **`presentation/Project-Presentation.pptx`** – Presentation slides.
+- **`report/FER Report.pdf`** – Final written report.
+- **`presentation/FER Presentation.pptx`** – Presentation slides.
 - **`api/`** – REST API implementation and Docker setup.
 
 ---
@@ -191,7 +196,7 @@ For dataset access and licensing details, consult the dataset owners’ website.
 
 ---
 
-## Academic Context
+## 🎓 Academic Context
 This project was completed as part of the **DAMA 51 – Foundations in Computer Science** module  
 in the MSc program **Data Science and Machine Learning** at the **Hellenic Open University (HOU)**.
 
