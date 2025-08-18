@@ -13,7 +13,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install R packages (plumber + caret + kknn)
-RUN R -e "install.packages(c('plumber', 'caret', 'kknn'))"
+RUN R -e "install.packages(c('plumber', 'caret', 'kknn', 'here'))"
 
 # Create working dir for the API and artifact path expected by api.R
 WORKDIR /app
@@ -24,8 +24,9 @@ COPY /api/api.R /app/api.R
 
 # Copy model and metadata from your repo into the image.
 # IMPORTANT: Build from project root so these paths exist in build context.
-COPY artifacts/models/knn_raw.rds  /artifacts/models/knn_raw.rds
-COPY artifacts/models/metadata.rds /artifacts/models/metadata.rds
+COPY artifacts/models/knn_raw.rds  /app/artifacts/models/knn_raw.rds
+COPY artifacts/models/metadata.rds /app/artifacts/models/metadata.rds
+COPY artifacts/models/preproc_raw.rds /app/artifacts/models/preproc_raw.rds
 
 EXPOSE 8000
 
